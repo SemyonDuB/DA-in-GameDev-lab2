@@ -53,19 +53,134 @@
 ![GC5](https://user-images.githubusercontent.com/45539357/194368257-98cabf12-a1da-45ac-9e6f-bcb29d2d195d.png)
 
 ## Задание 2
-### Пошагово выполнить каждый пункт раздела "ход работы" с описанием и примерами реализации задач
+### Реализовать запись в Google-таблицу набора данных, полученных с помощью линейной регрессии из лабораторной работы № 1
 
+```python
+import numpy as np
+import gspread
+
+
+def model(a, b, x):
+    return a * x + b
+
+
+def loss_function(a, b, x, y):
+    num = len(x)
+    prediction = model(a, b, x)
+    return (0.5 / num) * (np.square(prediction - y)).sum()
+
+
+def optimize(a, b, x, y):
+    num = len(x)
+    prediction = model(a, b, x)
+    da = (1.0 / num) * ((prediction - y) * x).sum()
+    db = (1.0 / num) * ((prediction - y).sum())
+    a = a - Lr * da
+    b = b - Lr * db
+    return a, b
+
+
+def iterate(a, b, x, y, times):
+    for i in range(times):
+        a, b = optimize(a, b, x, y)
+    return a, b
+
+
+gc = gspread.service_account(filename="unitydatascience-364713-96b52723f1cc.json")
+sh = gc.open("UnitySheets").get_worksheet(1)
+
+x = [3, 21, 22, 34, 54, 34, 55, 67, 89, 99]
+x = np.array(x)
+y = [2, 22, 24, 65, 79, 82, 55, 130, 150, 199]
+y = np.array(y)
+
+a = np.random.rand(1)
+print(a)
+b = np.random.rand(1)
+print(b)
+Lr = 0.000001
+
+a,b = iterate(a,b,x,y,1)
+prediction = model(a,b,x)
+loss = loss_function(a,b,x,y)
+print(a,b,loss)
+
+for i in range(len(x)):
+    sh.update(('A' + str(i + 1)), str(i + 1))
+    sh.update(('B' + str(i + 1)), str(x[i]))
+    sh.update(('C' + str(i + 1)), str(prediction[i]))
+```
+![Task2 1](https://user-images.githubusercontent.com/45539357/194375755-d2f0bdbd-f7c7-45f2-b764-e0cda226d6cf.png)
 
 ## Задание 3
 
-### Изучить код на Python и ответить на вопросы:
+### Самостоятельно разработать сценарий воспроизведения звукового сопровождения в Unity в зависимости от изменения считанных данных в задании 2.
+
+- Немного поменял структуру программы и добавил возможность сделать задержку между воспроизведением следующего фрагмента из сходя из данных второй колонки.
+
+```cs
+void Update()
+{
+  if (statusStart || i == dataSet.Count || !dataSet.ContainsKey("Mon_1"))
+    return;
+
+  var value = dataSet["Mon_" + i];
+  var time = timeStamps["Mon_" + i] / 10;
+
+  switch (value)
+  {
+    case < 5:
+      StartCoroutine(PlaySelectAudio(badSpeak, time));
+      break;
+    case >= 5 and < 10:
+      StartCoroutine(PlaySelectAudio(normalSpeak, time));
+      break;
+    case >= 10:
+      StartCoroutine(PlaySelectAudio(goodSpeak, time));
+      break;
+  }
+}
+
+IEnumerator GoogleSheets()
+{
+  UnityWebRequest currentResp =
+    UnityWebRequest.Get(
+      "https://sheets.googleapis.com/v4/spreadsheets/<reference>/values/Лист2?key=<key-code>");
+
+  yield return currentResp.SendWebRequest();
+
+  string rawResp = currentResp.downloadHandler.text;
+  var rawJson = JSON.Parse(rawResp);
+
+  foreach (var itemRawJson in rawJson["values"])
+  {
+    var parseJson = JSON.Parse(itemRawJson.ToString());
+    var selectRow = parseJson[0].AsStringList;
+    dataSet.Add("Mon_" + selectRow[0], float.Parse(selectRow[2]));
+    timeStamps.Add("Mon_" + selectRow[0], int.Parse(selectRow[1]));
+  }
+}
+
+IEnumerator PlaySelectAudio(AudioClip clip, int time)
+{
+  statusStart = true;
+  selectAudio = GetComponent<AudioSource>();
+  selectAudio.clip = clip;
+  selectAudio.Play();
+
+  yield return new WaitForSeconds(selectAudio.clip.length + time);
+
+  statusStart = false;
+  i++;
+  Debug.Log(clip.name);
+}
+```
+
+![Task3](https://user-images.githubusercontent.com/45539357/194390637-7f04e2d0-eb41-4156-9d6e-2b7f39770b8b.png)
 
 ## Выводы
 
-В ходе лабораторной работы я научился взаимодействовать с google.colab, просматривать графики и анализировать алгоритм работы программ. Кроме того научился работать в github и ознакомился с основными операторами зыка Python на примере реализации линейной регрессии.
-
-## Приложение
-[ссылка на блокнот в google.colab](https://colab.research.google.com/drive/1rXT8cx4VNWsd0JEJmZ3KINgqZyst13XO?usp=sharing)
+В ходе лабораторной работы я научился работать в Google cloud, добавлять в него новые сервисы и взаимодействовать с ними, используя Python и Unity.
 
 ## Powered by
 
